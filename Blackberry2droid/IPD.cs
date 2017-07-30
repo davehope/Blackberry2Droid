@@ -150,27 +150,29 @@ namespace Blackberry2droid
                     if (this.rawMessage == null)
                         return String.Empty;
 
-                    // If we're dealing with a unicode message, we need to decode it from
-                    // UCS-2 (Sorta like UTF-16) to something printable.
-                    if (this.IsUnicode)
+                    if (this.MessageEncoding.Equals("UCS-2"))
                     {
                         if (this.rawMessage == null)
-                            return String.Empty ;
-                        return Encoding.BigEndianUnicode.GetString(this.rawMessage);                
+                            return String.Empty;
+                        return Encoding.BigEndianUnicode.GetString(this.rawMessage);
                     }
-                    // Otherwise, it's just ASCII so print that bad boy out.
-                    else
+                    else // "GSM 03.38"
                     {
-                        return System.Text.ASCIIEncoding.ASCII.GetString(this.rawMessage);
+                        Encoding gsmEnc = new Mediaburst.Text.GSMEncoding();
+                        Encoding utf8Enc = new System.Text.UTF8Encoding();
+
+                        byte[] gsmBytes = this.rawMessage;
+                        byte[] utf8Bytes = Encoding.Convert(gsmEnc, utf8Enc, gsmBytes);
+                        return utf8Enc.GetString(utf8Bytes);
                     }
                 }
             }
-            private bool _IsUnicode;
-            public bool IsUnicode
+            private string _MessageEncoding;
+            public string MessageEncoding
             {
                 get
                 {
-                    return _IsUnicode;
+                    return _MessageEncoding;
                 }
             }
             private byte[] _rawMessage;
@@ -235,11 +237,11 @@ namespace Blackberry2droid
                     case 7:
                         if (fieldData[0] == 2)
                         {
-                            this._IsUnicode = true;
+                            this._MessageEncoding = "UCS-2";
                         }
                         else
                         {
-                            this._IsUnicode = false;
+                            this._MessageEncoding = "GSM 03.38";
                         }
                         break;
                 }
