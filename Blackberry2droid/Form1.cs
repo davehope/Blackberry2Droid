@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
 using System.IO;
+using System.Xml;
 
 namespace Blackberry2droid
 {
@@ -16,28 +17,12 @@ namespace Blackberry2droid
             InitializeComponent();
         }
 
-
         /// <summary>
-        /// Creates a new file.
+        /// Adds attributes to an sms XMLElement
         /// </summary>
-        /// <param name="filePath"></param>
-        /// <param name="messageCount"></param>
-        /// <returns></returns>
-        private StreamWriter createNewSMSFile(string filePath, int messageCount)
-        {
-            StreamWriter sw = new StreamWriter( filePath, false ); // Create new file.
-            sw.WriteLine( "<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>" );
-            sw.WriteLine( "<?xml-stylesheet type=\"text/xsl\" href=\"sms.xsl\"?>" );
-            sw.WriteLine( "<smses count=\"" + messageCount + "\">" );
-            return sw;
-        }
-
-        /// <summary>
-        /// Appends a message to the backup file.
-        /// </summary>
-        /// <param name="sw"></param>
+        /// <param name="sms"></param>
         /// <param name="smsMessage"></param>
-        private void addSMStoFile(StreamWriter sw, ReadIPD.IPD_SMSRecord smsMessage )
+        private void addSMStoFile(XmlElement sms, ReadIPD.IPD_SMSRecord smsMessage )
         {
             DateTime smsDate = DateTime.MinValue;
             int messageType = 0;
@@ -55,33 +40,23 @@ namespace Blackberry2droid
                 date = smsMessage.ReceivedEpoch;
             }
 
-            string messageLine = "<sms protocol=\"0\" address=\"" + smsMessage.Number  + "\" ";
-            messageLine += "date=\"" + date + "\" type=\""+ messageType + "\" subject=\"null\" body=\"";
-			if (smsMessage.IsUnicode)
-			{
-				// We may not need to call HtmlEncode, not sure yet.
-				messageLine += System.Web.HttpUtility.HtmlEncode(smsMessage.Message);
-			}
-			else
-			{
-				messageLine += smsMessage.Message;
-			}
-            messageLine += "\" toa=\"null\" sc_toa=\"null\" service_center=\"null\" read=\"1\" status=\"-1\" locked=\"0\" "; // No idea what this means.
-            messageLine += "readable_date=\"" + smsDate.ToString("MMM dd, yyyy h:mm tt") + "\" contact_name=\"(Unknown)\" />";
-            sw.WriteLine(messageLine);
+            sms.SetAttribute("protocol", "0");
+            sms.SetAttribute("address", smsMessage.Number);
+            sms.SetAttribute("date", date.ToString());
+            sms.SetAttribute("type", messageType.ToString());
+            sms.SetAttribute("subject", "null");
+            sms.SetAttribute("body", smsMessage.Message);
+
+            sms.SetAttribute("toa", "null");
+            sms.SetAttribute("sc_toa", "null");
+            sms.SetAttribute("service_center", "null");
+            sms.SetAttribute("read", "1");
+            sms.SetAttribute("status", "-1");
+            sms.SetAttribute("locked", "0");
+            sms.SetAttribute("readable_date", smsDate.ToString("MMM dd, yyyy h:mm tt"));
+            sms.SetAttribute("contact_name", "(Unknown)");
+            sms.SetAttribute("locked", "0");
         }
-
-
-        /// <summary>
-        /// Add closing XML statement and close stream.
-        /// </summary>
-        /// <param name="sw"></param>
-        private void closeFile(StreamWriter sw)
-        {
-            sw.WriteLine("</smses>");
-            sw.Close();
-        }
-
 
         /// <summary>
         /// Function to process conversion to SMS backup & Restoe format.
@@ -151,18 +126,26 @@ namespace Blackberry2droid
                 progConversion.Maximum = smsMessages.Count;
                 lblStatus.Text = "Converting messages";
 
-                // Create new file.
-                using (StreamWriter sw = createNewSMSFile(destinationFile, smsMessages.Count))
+                XmlDocument xmlDoc = new XmlDocument();
+                XmlElement smses = xmlDoc.CreateElement("smses");
+                xmlDoc.AppendChild(smses);
+                smses.SetAttribute("count", smsMessages.Count.ToString());
+
+                //
+                // Extract message and convert.
+                foreach (object smsMessage in smsMessages)
                 {
-                    //
-                    // Extract message and convert.
-                    foreach (object smsMessage in smsMessages)
-                    {
-                        addSMStoFile(sw, (ReadIPD.IPD_SMSRecord)smsMessage);
-                        progConversion.Value += 1;
-                    }
-                    closeFile(sw);
+
+                    XmlElement sms = xmlDoc.CreateElement("sms");
+
+                    addSMStoFile(sms, (ReadIPD.IPD_SMSRecord)smsMessage);
+                    smses.AppendChild(sms);
+                    progConversion.Value += 1;
                 }
+
+
+                // Output
+                xmlDoc.Save(destinationFile);
 
                 // All done.
                 lblStatus.Text = "Complete";
