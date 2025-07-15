@@ -88,7 +88,7 @@ namespace Blackberry2droid
             {
                 int dThisDatabaseId = Convert.ToInt32( xmlNode.Attributes["uid"].Value );
                 dDatabaseId = dThisDatabaseId;
-                szZipPath = "Databases\\" + dThisDatabaseId + ".dat";
+                szZipPath = "Databases/" + dThisDatabaseId + ".dat";
                 break;                  
             }
             return szZipPath;
