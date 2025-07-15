@@ -1,12 +1,11 @@
 # Blackberry2Droid
 
-This is the C# (.Net 4.7) sourcecode for [Blackberry2Droid](https://damn.technology/blackberry2droid), a free application that converts Blackberry IPD/BBB files to an XML format supported by "SMS Backup and Restore".
+This is the C# (.Net 4.7) sourcecode for Blackberry2Droid, a free application that converts Blackberry IPD/BBB files to an XML format supported by "SMS Backup and Restore".
 
 ## Dependencies
 
 | Dependency    | Licence       |
 | ------------- | ------------- |
-| [Ionic ZIP library](https://dotnetzip.codeplex.com/) | Microsoft Public License (Ms-PL) |
 | [Clockwork GSM Encoding library](https://github.com/mediaburst/.NET-GSM-Encoding) | MIT Licence |
 
 ## License
