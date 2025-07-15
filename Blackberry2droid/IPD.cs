@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using System.Xml;
-using Ionic.Zip;
+using System.IO.Compression;
 
 
 namespace Blackberry2droid
@@ -41,25 +41,33 @@ namespace Blackberry2droid
         /// <param name="szRequiredDatabase"></param>
         public ExtractBBBFile(string szFilePath, string szRequiredDatabase)
         {
+            szTempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(szTempDir); // Ensure directory exists
+
             string szZipPath = string.Empty;
-            szTempDir = Path.Combine( Path.GetTempPath(), Path.GetRandomFileName() );
-            
-            using (ZipFile objZipFile = ZipFile.Read(szFilePath))
+
+            using (ZipArchive archive = ZipFile.OpenRead(szFilePath))
             {
-                // Extract Manifest file.
-                ZipEntry objZipManifest = objZipFile["Manifest.xml"];
-                objZipManifest.Extract(szTempDir, ExtractExistingFileAction.OverwriteSilently);
-                
-                // Get the path inside the ZIP FILE to the required database.
-                szZipPath = getDatabaseUriFromManifest(szRequiredDatabase, Path.Combine(szTempDir, "Manifest.xml"));
+                // Extract Manifest.xml
+                ZipArchiveEntry manifestEntry = archive.GetEntry("Manifest.xml");
+                if (manifestEntry != null)
+                {
+                    string manifestPath = Path.Combine(szTempDir, "Manifest.xml");
+                    manifestEntry.ExtractToFile(manifestPath, overwrite: true);
 
-                // Extract databse file.
-                ZipEntry objZipDatabase = objZipFile[szZipPath];
-                objZipDatabase.Extract(szTempDir, ExtractExistingFileAction.OverwriteSilently);
-                szDatabasePath = Path.Combine(szTempDir, szZipPath);
-                return;
+                    // Get path to required database inside the ZIP
+                    szZipPath = getDatabaseUriFromManifest(szRequiredDatabase, manifestPath);
+
+                    // Extract database file
+                    ZipArchiveEntry databaseEntry = archive.GetEntry(szZipPath);
+                    if (databaseEntry != null)
+                    {
+                        szDatabasePath = Path.Combine(szTempDir, szZipPath);
+                        Directory.CreateDirectory(Path.GetDirectoryName(szDatabasePath)); // Create subfolders if needed
+                        databaseEntry.ExtractToFile(szDatabasePath, overwrite: true);
+                    }
+                }
             }
-
         }
         
 
@@ -80,7 +88,7 @@ namespace Blackberry2droid
             {
                 int dThisDatabaseId = Convert.ToInt32( xmlNode.Attributes["uid"].Value );
                 dDatabaseId = dThisDatabaseId;
-                szZipPath = "Databases\\" + dThisDatabaseId + ".dat";
+                szZipPath = "Databases/" + dThisDatabaseId + ".dat";
                 break;                  
             }
             return szZipPath;
